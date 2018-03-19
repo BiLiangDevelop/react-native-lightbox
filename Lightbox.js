@@ -1,47 +1,63 @@
-import React, { Component,  Children, cloneElement } from 'react';
+/**
+ * @providesModule Lightbox
+ */
+'use strict';
+
+var React = require('react');
+var {
+  Children,
+  cloneElement,
+} = React;
+var {
+  Animated,
+  TouchableHighlight,
+  View,
+} = require('react-native');
+var TimerMixin = require('react-timer-mixin');
 import PropTypes from 'prop-types';
-import { Animated, TouchableHighlight, View } from 'react-native';
+var LightboxOverlay = require('./LightboxOverlay');
+import createReactClass from 'create-react-class';
 
-import LightboxOverlay from './LightboxOverlay';
+var Lightbox = createReactClass({
+  mixins: [TimerMixin],
 
-export default class Lightbox extends Component {
-  static propTypes = {
+  propTypes: {
     activeProps:     PropTypes.object,
     renderHeader:    PropTypes.func,
     renderContent:   PropTypes.func,
     underlayColor:   PropTypes.string,
     backgroundColor: PropTypes.string,
-    didOpen:         PropTypes.func,
     onOpen:          PropTypes.func,
-    willClose:       PropTypes.func,
     onClose:         PropTypes.func,
     springConfig:    PropTypes.shape({
       tension:       PropTypes.number,
       friction:      PropTypes.number,
     }),
     swipeToDismiss:  PropTypes.bool,
-  };
+  },
 
-  static defaultProps = {
-    swipeToDismiss: true,
-    onOpen: () => {},
-    didOpen: () => {},
-    willClose: () => {},
-    onClose: () => {},
-  };
+  getDefaultProps: function() {
+    return {
+      swipeToDismiss: true,
+      onOpen: () => {},
+      onClose: () => {},
+    };
+  },
 
-  state = {
-    isOpen: false,
-    origin: {
-      x: 0,
-      y: 0,
-      width: 0,
-      height: 0,
-    },
-    layoutOpacity: new Animated.Value(1),
-  };
+  getInitialState: function() {
+    return {
+      isOpen: false,
+      origin: {
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+      },
+      layoutOpacity: new Animated.Value(1),
+    };
+  },
 
-  getContent = () => {
+  getContent: function() {
     if(this.props.renderContent) {
       return this.props.renderContent();
     } else if(this.props.activeProps) {
@@ -51,22 +67,22 @@ export default class Lightbox extends Component {
       );
     }
     return this.props.children;
-  }
+  },
 
-  getOverlayProps = () => ({
-    isOpen: this.state.isOpen,
-    origin: this.state.origin,
-    renderHeader: this.props.renderHeader,
-    swipeToDismiss: this.props.swipeToDismiss,
-    springConfig: this.props.springConfig,
-    backgroundColor: this.props.backgroundColor,
-    children: this.getContent(),
-    didOpen: this.props.didOpen,
-    willClose: this.props.willClose,
-    onClose: this.onClose,
-  })
+  getOverlayProps: function() {
+    return {
+      isOpen: this.state.isOpen,
+      origin: this.state.origin,
+      renderHeader: this.props.renderHeader,
+      swipeToDismiss: this.props.swipeToDismiss,
+      springConfig: this.props.springConfig,
+      backgroundColor: this.props.backgroundColor,
+      children: this.getContent(),
+      onClose: this.onClose,
+    };
+  },
 
-  open = () => {
+  open: function() {
     this._root.measure((ox, oy, width, height, px, py) => {
       this.props.onOpen();
 
@@ -80,13 +96,12 @@ export default class Lightbox extends Component {
           y: py,
         },
       }, () => {
-        this.props.didOpen();
         if(this.props.navigator) {
-          const route = {
+          var route = {
             component: LightboxOverlay,
             passProps: this.getOverlayProps(),
           };
-          const routes = this.props.navigator.getCurrentRoutes();
+          var routes = this.props.navigator.getCurrentRoutes();
           routes.push(route);
           this.props.navigator.immediatelyResetRouteStack(routes);
         } else {
@@ -94,30 +109,30 @@ export default class Lightbox extends Component {
             isOpen: true,
           });
         }
-        setTimeout(() => {
-          this._root && this.state.layoutOpacity.setValue(0);
+        this.setTimeout(() => {
+          this.state.layoutOpacity.setValue(0);
         });
       });
     });
-  }
+  },
 
-  close = () => {
+  close: function() {
     throw new Error('Lightbox.close method is deprecated. Use renderHeader(close) prop instead.')
-  }
+  },
 
-  onClose = () => {
+  onClose: function() {
     this.state.layoutOpacity.setValue(1);
     this.setState({
       isOpen: false,
     }, this.props.onClose);
     if(this.props.navigator) {
-      const routes = this.props.navigator.getCurrentRoutes();
+      var routes = this.props.navigator.getCurrentRoutes();
       routes.pop();
       this.props.navigator.immediatelyResetRouteStack(routes);
     }
-  }
+  },
 
-  render() {
+  render: function() {
     // measure will not return anything useful if we dont attach a onLayout handler on android
     return (
       <View
@@ -137,4 +152,6 @@ export default class Lightbox extends Component {
       </View>
     );
   }
-}
+});
+
+module.exports = Lightbox;
